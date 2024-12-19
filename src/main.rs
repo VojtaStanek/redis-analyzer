@@ -121,8 +121,7 @@ fn main() {
         eprintln!("Getting sample from db{keyspace} - {sample_size} keys of {total} total");
         let mut prefix_map = PrefixMap::default();
         let mut connection = RedisConnection::open(args.host.clone(), args.port, keyspace).unwrap();
-        let result = connection.scan(sample_size).unwrap().collect::<Vec<_>>();
-        eprintln!("  Scan complete");
+        let result = connection.scan(sample_size).unwrap();
         let bar = ProgressBar::new(result.len() as u64);
         for key in result {
             let memory_usage = connection.memory_usage(&key).unwrap();
