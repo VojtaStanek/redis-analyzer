@@ -53,6 +53,7 @@ impl RedisConnection {
                 .arg(limit)
                 .clone()
                 .iter(conn)?
+                .take(usize::try_from(limit).unwrap_or(usize::MAX))
                 .collect()
         })
     }
