@@ -1,4 +1,4 @@
-use redis::{FromRedisValue, RedisResult, Value, from_redis_value};
+use redis::{FromRedisValue, ParsingError, Value, from_redis_value};
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::str::FromStr;
@@ -59,7 +59,7 @@ impl KeyspaceInfo {
 }
 
 impl FromRedisValue for KeyspacesInfo {
-    fn from_redis_value(v: &Value) -> RedisResult<Self> {
+    fn from_redis_value(v: Value) -> Result<Self, ParsingError> {
         let s: String = from_redis_value(v)?;
         let mut keyspaces = HashMap::new();
         for line in s.lines() {

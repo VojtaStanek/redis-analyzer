@@ -1,6 +1,6 @@
 use crate::KeyspacesInfo;
 use crate::keyspace_info::KeyspaceId;
-use redis::{ConnectionAddr, ConnectionInfo, RedisConnectionInfo, RedisResult};
+use redis::{ConnectionInfo, IntoConnectionInfo, RedisResult};
 
 pub struct RedisConnection {
     connection_info: ConnectionInfo,
@@ -9,13 +9,9 @@ pub struct RedisConnection {
 
 impl RedisConnection {
     pub fn open(host: String, port: u16, db: KeyspaceId) -> RedisResult<Self> {
-        let connection_info = ConnectionInfo {
-            addr: ConnectionAddr::Tcp(host, port),
-            redis: RedisConnectionInfo {
-                db: db.as_i64(),
-                ..Default::default()
-            },
-        };
+        let connection_info = (host, port).into_connection_info()?;
+        let redis_settings = connection_info.redis_settings().clone().set_db(db.as_i64());
+        let connection_info = connection_info.set_redis_settings(redis_settings);
         Ok(Self {
             connection_info: connection_info.clone(),
             connection: redis::Client::open(connection_info)?.get_connection()?,
@@ -51,13 +47,13 @@ impl RedisConnection {
 
     pub fn scan(&mut self, limit: u64) -> RedisResult<Vec<String>> {
         self.use_connection(|conn| {
-            Ok(redis::cmd("SCAN")
+            redis::cmd("SCAN")
                 .arg(0)
                 .arg("COUNT")
                 .arg(limit)
                 .clone()
                 .iter(conn)?
-                .collect::<Vec<_>>())
+                .collect()
         })
     }
 

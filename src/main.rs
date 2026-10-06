@@ -15,16 +15,16 @@ use std::iter::Sum;
 use std::ops::Add;
 
 #[derive(Parser, Debug)]
-#[clap()]
+#[command()]
 struct Args {
     /// Redis host
-    #[clap(default_value = "127.0.0.1")]
+    #[arg(default_value = "127.0.0.1")]
     host: String,
     /// Redis port
-    #[clap(default_value = "6379")]
+    #[arg(default_value = "6379")]
     port: u16,
     /// Output CSV
-    #[clap(long)]
+    #[arg(long)]
     csv: bool,
 }
 
