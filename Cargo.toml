@@ -15,3 +15,9 @@ csv = "1.4"
 [profile.release]
 strip = true
 
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+cast_precision_loss = "allow" # u64 -> f64 for estimates is intended
+cast_possible_wrap = "allow"
+too_many_lines = "allow"

@@ -55,7 +55,7 @@ impl Results {
     fn names_width(&self) -> usize {
         self.items
             .iter()
-            .map(|i| i.name_column_width())
+            .map(Item::name_column_width)
             .max()
             .unwrap_or(0)
     }
@@ -86,9 +86,9 @@ impl Results {
 
         // Items
         let results_printer = ResultsPrinter::new(self);
-        for item in self.items.iter() {
+        for item in &self.items {
             for row in results_printer.item_strings(item, 0) {
-                for (_, datum, _) in row.iter() {
+                for (_, datum, _) in &row {
                     csv_writer.write_field(datum)?;
                 }
                 csv_writer.write_record(None::<&[u8]>)?;
@@ -103,7 +103,7 @@ impl Display for Results {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let results_printer = ResultsPrinter::new(self);
         f.write_str(&results_printer.header())?;
-        for i in self.items.iter() {
+        for i in &self.items {
             f.write_str(&results_printer.item(i, 0))?;
         }
         Ok(())
@@ -140,7 +140,7 @@ impl<'a> ResultsPrinter<'a> {
         for (index, column) in self.results.columns.iter().enumerate() {
             s.push_str(COLUMNS_SEPARATOR);
             s.push_str(&" ".repeat(self.columns_widths[index] - column.len()));
-            s.push_str(&column.to_string());
+            s.push_str(&column.clone());
         }
         s.push('\n');
         s
@@ -161,7 +161,7 @@ impl<'a> ResultsPrinter<'a> {
             let datum = item
                 .columns
                 .get(column)
-                .map_or_else(|| "".to_string(), |d| d.to_string());
+                .map_or_else(String::new, std::string::ToString::to_string);
             row.push((Alignment::Right, datum, self.columns_widths[index]));
         }
         rows.push(row);

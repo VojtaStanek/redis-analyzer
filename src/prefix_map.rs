@@ -16,7 +16,7 @@ impl<V> PrefixMap<Option<V>> {
         let mut node = self;
         let mut last_prefix = "";
         for (index, _) in matches {
-            let prefix = &key[0..(index + 1)];
+            let prefix = &key[0..=index];
             node = node
                 .children
                 .entry(prefix.to_string())
@@ -30,7 +30,7 @@ impl<V> PrefixMap<Option<V>> {
             node.value = Some(value);
         } else {
             node.children.insert(
-                key.to_string(),
+                key,
                 PrefixMap {
                     value: Some(value),
                     children: HashMap::new(),
@@ -41,13 +41,13 @@ impl<V> PrefixMap<Option<V>> {
 }
 
 impl<V: Clone + std::fmt::Debug> PrefixMap<Option<V>> {
-    /// Creates a new PrefixMap without nodes with a single child and no value.
+    /// Creates a new `PrefixMap` without nodes with a single child and no value.
     pub fn simplify(&self) -> Self {
         self.replace_nodes::<PrefixMap<Option<V>>, _>(&|prefix, value, children| {
             if value.is_none() && children.len() == 1 {
                 let (child_prefix, child) = children.iter().next().unwrap();
                 (
-                    child_prefix.to_string(),
+                    child_prefix.clone(),
                     PrefixMap::new(child.value.clone(), child.children.clone()),
                 )
             } else {
@@ -172,7 +172,7 @@ mod test {
     fn test2() {
         let mut map = super::PrefixMap::default();
         map.insert("foo".to_string(), ());
-        map.insert("".to_string(), ());
+        map.insert(String::new(), ());
         assert!(map.value.is_some());
         assert!(map.children.get("foo").unwrap().value.is_some());
     }
@@ -218,7 +218,7 @@ mod test {
         };
 
         let count = map.transform::<usize, _>(&|_, value, children| {
-            value.map_or(0, |_| 1) + children.values().sum::<usize>()
+            value.map_or(0, |()| 1) + children.values().sum::<usize>()
         });
 
         assert_eq!(count, 4);
@@ -252,7 +252,7 @@ mod test {
         }
         .simplify();
 
-        println!("{:?}", simplified);
+        println!("{simplified:?}");
 
         let v1 = simplified.children.get("bar:1").unwrap();
         assert_eq!(v1.children.len(), 0);

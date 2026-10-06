@@ -47,7 +47,7 @@ impl Sum for KeyspaceTreeNodeInfo {
     where
         I: Iterator<Item = Self>,
     {
-        iter.fold(Default::default(), |acc, x| acc + x)
+        iter.fold(Self::default(), |acc, x| acc + x)
     }
 }
 
@@ -74,7 +74,7 @@ impl Sum for ExtendedKeyspaceTreeNodeInfo {
     where
         I: Iterator<Item = Self>,
     {
-        iter.fold(Default::default(), |acc, x| acc + x)
+        iter.fold(Self::default(), |acc, x| acc + x)
     }
 }
 
@@ -85,7 +85,7 @@ fn main() {
     let keyspaces = match connection.keyspaces() {
         Ok(keyspaces) => keyspaces,
         Err(e) => {
-            eprintln!("Redis query failed: {}", e);
+            eprintln!("Redis query failed: {e}");
             std::process::exit(1);
         }
     };
@@ -261,6 +261,6 @@ fn main() {
         let mut writer = csv::Writer::from_writer(std::io::stdout());
         results.write_to_csv(&mut writer).unwrap();
     } else {
-        println!("{}", results);
+        println!("{results}");
     }
 }
