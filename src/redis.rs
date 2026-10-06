@@ -1,6 +1,6 @@
-use redis::{ConnectionAddr, ConnectionInfo, RedisConnectionInfo, RedisResult};
-use crate::keyspace_info::KeyspaceId;
 use crate::KeyspacesInfo;
+use crate::keyspace_info::KeyspaceId;
+use redis::{ConnectionAddr, ConnectionInfo, RedisConnectionInfo, RedisResult};
 
 pub struct RedisConnection {
     connection_info: ConnectionInfo,
@@ -16,13 +16,16 @@ impl RedisConnection {
                 ..Default::default()
             },
         };
-        Ok(Self {  
+        Ok(Self {
             connection_info: connection_info.clone(),
             connection: redis::Client::open(connection_info)?.get_connection()?,
         })
     }
 
-    fn use_connection<F: Fn(&mut redis::Connection) -> RedisResult<T>, T>(&mut self, f: F) -> RedisResult<T> {
+    fn use_connection<F: Fn(&mut redis::Connection) -> RedisResult<T>, T>(
+        &mut self,
+        f: F,
+    ) -> RedisResult<T> {
         let mut retries = 0;
         loop {
             let result = f(&mut self.connection);
@@ -36,7 +39,8 @@ impl RedisConnection {
                 1 => 2,
                 _ => 5,
             }));
-            self.connection = redis::Client::open(self.connection_info.clone())?.get_connection()?;
+            self.connection =
+                redis::Client::open(self.connection_info.clone())?.get_connection()?;
             retries += 1;
         }
     }
@@ -47,11 +51,24 @@ impl RedisConnection {
 
     pub fn scan(&mut self, limit: u64) -> RedisResult<Vec<String>> {
         self.use_connection(|conn| {
-            Ok(redis::cmd("SCAN").arg(0).arg("COUNT").arg(limit).clone().iter(conn)?.collect::<Vec<_>>())
+            Ok(redis::cmd("SCAN")
+                .arg(0)
+                .arg("COUNT")
+                .arg(limit)
+                .clone()
+                .iter(conn)?
+                .collect::<Vec<_>>())
         })
     }
 
     pub fn memory_usage(&mut self, key: &str) -> RedisResult<u64> {
-        self.use_connection(|conn| redis::cmd("MEMORY").arg("USAGE").arg(key).arg("SAMPLES").arg(0).query(conn))
+        self.use_connection(|conn| {
+            redis::cmd("MEMORY")
+                .arg("USAGE")
+                .arg(key)
+                .arg("SAMPLES")
+                .arg(0)
+                .query(conn)
+        })
     }
 }

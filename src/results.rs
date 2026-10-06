@@ -1,7 +1,7 @@
+use csv::Writer;
 use std::cmp::max;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
-use csv::Writer;
 
 #[derive(Debug, Clone)]
 pub struct Results {
@@ -53,7 +53,11 @@ impl Item {
 impl Results {
     #[must_use]
     fn names_width(&self) -> usize {
-        self.items.iter().map(|i| i.name_column_width()).max().unwrap_or(0)
+        self.items
+            .iter()
+            .map(|i| i.name_column_width())
+            .max()
+            .unwrap_or(0)
     }
 
     #[must_use]
@@ -65,7 +69,8 @@ impl Results {
             }
             width
         }
-        self.items.iter()
+        self.items
+            .iter()
             .map(|i| item_width(i, column))
             .max()
             .unwrap_or(0)
@@ -116,12 +121,16 @@ enum Alignment {
     Right,
 }
 
-impl <'a> ResultsPrinter<'a> {
+impl<'a> ResultsPrinter<'a> {
     fn new(results: &'a Results) -> Self {
         Self {
             results,
             names_width: results.names_width(),
-            columns_widths: results.columns.iter().map(|c| max(c.len(), results.column_width(c))).collect(),
+            columns_widths: results
+                .columns
+                .iter()
+                .map(|c| max(c.len(), results.column_width(c)))
+                .collect(),
         }
     }
 
@@ -149,7 +158,10 @@ impl <'a> ResultsPrinter<'a> {
         name.push_str(&item.name);
         row.push((Alignment::Left, name, self.names_width));
         for (index, column) in self.results.columns.iter().enumerate() {
-            let datum = item.columns.get(column).map_or_else(|| "".to_string(), |d| d.to_string());
+            let datum = item
+                .columns
+                .get(column)
+                .map_or_else(|| "".to_string(), |d| d.to_string());
             row.push((Alignment::Right, datum, self.columns_widths[index]));
         }
         rows.push(row);
@@ -171,11 +183,11 @@ impl <'a> ResultsPrinter<'a> {
                     Alignment::Left => {
                         s.push_str(&datum);
                         s.push_str(padding);
-                    },
+                    }
                     Alignment::Right => {
                         s.push_str(padding);
                         s.push_str(&datum);
-                    },
+                    }
                 }
                 if index < columns_count - 1 {
                     s.push_str(COLUMNS_SEPARATOR);
@@ -210,32 +222,28 @@ impl <'a> ResultsPrinter<'a> {
 
 #[cfg(test)]
 mod test {
-    use std::collections::HashMap;
     use crate::results::{Datum, Item, Results};
+    use std::collections::HashMap;
 
     #[test]
     fn test1() {
         let result = Results {
             columns: vec!["1".to_string(), "2".to_string(), "c3".to_string()],
-            items: vec![
-                Item {
-                    name: "item1".to_string(),
-                    columns: {
-                        let mut map = HashMap::new();
-                        map.insert("1".to_string(), Datum::Count(1));
-                        map.insert("2".to_string(), Datum::Percent(1.23123));
-                        map.insert("c3".to_string(), Datum::Count(3));
-                        map
-                    },
-                    children: vec![
-                        Item {
-                            name: "child".to_string(),
-                            columns: HashMap::new(),
-                            children: vec![],
-                        }
-                    ],
+            items: vec![Item {
+                name: "item1".to_string(),
+                columns: {
+                    let mut map = HashMap::new();
+                    map.insert("1".to_string(), Datum::Count(1));
+                    map.insert("2".to_string(), Datum::Percent(1.23123));
+                    map.insert("c3".to_string(), Datum::Count(3));
+                    map
                 },
-            ],
+                children: vec![Item {
+                    name: "child".to_string(),
+                    columns: HashMap::new(),
+                    children: vec![],
+                }],
+            }],
         };
         assert_eq!(
             result.to_string(),

@@ -1,7 +1,7 @@
+use redis::{FromRedisValue, RedisResult, Value, from_redis_value};
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::str::FromStr;
-use redis::{from_redis_value, FromRedisValue, RedisResult, Value};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct KeyspaceId(i64);
@@ -21,7 +21,6 @@ impl Display for KeyspaceId {
         self.0.fmt(f)
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct KeyspacesInfo {
@@ -78,4 +77,3 @@ impl FromRedisValue for KeyspacesInfo {
         Ok(KeyspacesInfo { keyspaces })
     }
 }
-
