@@ -23,12 +23,12 @@ pub enum Datum {
     Stat(f64),
 }
 
-impl ToString for Datum {
-    fn to_string(&self) -> String {
+impl Display for Datum {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Datum::Percent(p) => format!("{:.1}%", p * 100.0),
-            Datum::Count(c) => c.to_string(),
-            Datum::Stat(s) => format!("{:.1}", s),
+            Datum::Percent(p) => write!(f, "{:.1}%", p * 100.0),
+            Datum::Count(c) => write!(f, "{c}"),
+            Datum::Stat(s) => write!(f, "{s:.1}"),
         }
     }
 }
@@ -80,7 +80,7 @@ impl Results {
         // Header
         csv_writer.write_field("")?;
         for column in &self.columns {
-            csv_writer.write_field(column.to_string())?;
+            csv_writer.write_field(column)?;
         }
         csv_writer.write_record(None::<&[u8]>)?;
 
@@ -142,7 +142,7 @@ impl<'a> ResultsPrinter<'a> {
             s.push_str(&" ".repeat(self.columns_widths[index] - column.len()));
             s.push_str(&column.to_string());
         }
-        s.push_str("\n");
+        s.push('\n');
         s
     }
 
@@ -193,9 +193,9 @@ impl<'a> ResultsPrinter<'a> {
                     s.push_str(COLUMNS_SEPARATOR);
                 }
             }
-            s.push_str("\n");
+            s.push('\n');
         }
-        return s;
+        s
     }
 }
 

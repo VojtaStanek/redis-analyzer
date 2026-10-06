@@ -2,7 +2,6 @@ mod keyspace_info;
 mod prefix_map;
 mod redis;
 mod results;
-mod results2;
 
 use crate::keyspace_info::{KeyspaceId, KeyspacesInfo};
 use crate::prefix_map::PrefixMap;
@@ -28,18 +27,10 @@ struct Args {
     csv: bool,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 struct KeyspaceTreeNodeInfo {
     memory_usage: u64,
     count: u64,
-}
-impl Default for KeyspaceTreeNodeInfo {
-    fn default() -> Self {
-        KeyspaceTreeNodeInfo {
-            memory_usage: 0,
-            count: 0,
-        }
-    }
 }
 impl Add for KeyspaceTreeNodeInfo {
     type Output = Self;
@@ -60,20 +51,11 @@ impl Sum for KeyspaceTreeNodeInfo {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 struct ExtendedKeyspaceTreeNodeInfo {
     info: KeyspaceTreeNodeInfo,
     estimated_total_count: f64,
     estimated_total_memory_usage: f64,
-}
-impl Default for ExtendedKeyspaceTreeNodeInfo {
-    fn default() -> Self {
-        ExtendedKeyspaceTreeNodeInfo {
-            info: Default::default(),
-            estimated_total_count: 0.0,
-            estimated_total_memory_usage: 0.0,
-        }
-    }
 }
 impl Add for ExtendedKeyspaceTreeNodeInfo {
     type Output = Self;
@@ -157,12 +139,12 @@ fn main() {
                     .transform_to_prefix_map::<ExtendedKeyspaceTreeNodeInfo, _>(
                         &|_key, value, children| {
                             let mut out_value = children
-                                .iter()
-                                .map(|(_, map)| map.value)
+                                .values()
+                                .map(|map| map.value)
                                 .sum::<ExtendedKeyspaceTreeNodeInfo>();
-                            if value.is_some() {
+                            if let Some(memory_usage) = value {
                                 out_value.info.count += 1;
-                                out_value.info.memory_usage += value.unwrap();
+                                out_value.info.memory_usage += memory_usage;
                             }
                             (
                                 ExtendedKeyspaceTreeNodeInfo {
@@ -183,8 +165,8 @@ fn main() {
 
     let merged = PrefixMap::new(
         with_info
-            .iter()
-            .map(|(_, it)| it.value)
+            .values()
+            .map(|it| it.value)
             .sum::<ExtendedKeyspaceTreeNodeInfo>(),
         with_info
             .into_iter()
@@ -217,7 +199,7 @@ fn main() {
                         .map(|(_, (count, _))| *count)
                         .sum::<ExtendedKeyspaceTreeNodeInfo>();
                     (
-                        value.clone(),
+                        *value,
                         children
                             .into_iter()
                             .rev()

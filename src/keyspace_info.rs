@@ -34,27 +34,33 @@ pub struct KeyspaceInfo {
     pub avg_ttl: u64,
 }
 
-impl KeyspaceInfo {
-    pub fn from_str(s: &str) -> KeyspaceInfo {
+impl FromStr for KeyspaceInfo {
+    type Err = ParsingError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut keys = None;
         let mut expires = None;
         let mut avg_ttl = None;
         for part in s.split(',') {
-            let mut kv = part.splitn(2, '=');
-            let key = kv.next().unwrap();
-            let value = kv.next().unwrap();
+            let (key, value) = part
+                .split_once('=')
+                .ok_or_else(|| format!("invalid keyspace info part: {part}"))?;
+            let parse = |value: &str| {
+                u64::from_str(value)
+                    .map_err(|e| ParsingError::from(format!("invalid value of {key}: {e}")))
+            };
             match key {
-                "keys" => keys = Some(u64::from_str(value).unwrap()),
-                "expires" => expires = Some(u64::from_str(value).unwrap()),
-                "avg_ttl" => avg_ttl = Some(u64::from_str(value).unwrap()),
+                "keys" => keys = Some(parse(value)?),
+                "expires" => expires = Some(parse(value)?),
+                "avg_ttl" => avg_ttl = Some(parse(value)?),
                 _ => (),
             }
         }
-        KeyspaceInfo {
-            keys: keys.unwrap(),
-            expires: expires.unwrap(),
-            avg_ttl: avg_ttl.unwrap(),
-        }
+        Ok(KeyspaceInfo {
+            keys: keys.ok_or("missing keys in keyspace info")?,
+            expires: expires.ok_or("missing expires in keyspace info")?,
+            avg_ttl: avg_ttl.ok_or("missing avg_ttl in keyspace info")?,
+        })
     }
 }
 
@@ -66,14 +72,37 @@ impl FromRedisValue for KeyspacesInfo {
             if line.is_empty() || line == "# Keyspace" {
                 continue;
             }
-            let mut pair = line.splitn(2, ':');
-            let keyspace = pair.next().unwrap();
-            let (prefix, number) = keyspace.split_at(2);
-            assert_eq!(prefix, "db");
-            let number = KeyspaceId::new(i64::from_str(number).unwrap());
-            let info = pair.next().unwrap();
-            keyspaces.insert(number, KeyspaceInfo::from_str(info));
+            let (keyspace, info) = line
+                .split_once(':')
+                .ok_or_else(|| format!("invalid keyspace line: {line}"))?;
+            let number = keyspace
+                .strip_prefix("db")
+                .and_then(|n| i64::from_str(n).ok())
+                .ok_or_else(|| format!("invalid keyspace name: {keyspace}"))?;
+            keyspaces.insert(KeyspaceId::new(number), info.parse()?);
         }
         Ok(KeyspacesInfo { keyspaces })
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::{KeyspaceId, KeyspacesInfo};
+    use redis::{FromRedisValue, Value};
+
+    #[test]
+    fn test_parse_keyspaces() {
+        let info = "# Keyspace\r\ndb0:keys=10,expires=2,avg_ttl=300\r\ndb3:keys=1,expires=0,avg_ttl=0,subexpiry=0\r\n";
+        let parsed = KeyspacesInfo::from_redis_value(Value::BulkString(info.into())).unwrap();
+        assert_eq!(parsed.keyspaces.len(), 2);
+        let db0 = &parsed.keyspaces[&KeyspaceId::new(0)];
+        assert_eq!((db0.keys, db0.expires, db0.avg_ttl), (10, 2, 300));
+        assert_eq!(parsed.keyspaces[&KeyspaceId::new(3)].keys, 1);
+    }
+
+    #[test]
+    fn test_parse_keyspaces_invalid() {
+        let info = "# Keyspace\r\nfoo:keys=10\r\n";
+        assert!(KeyspacesInfo::from_redis_value(Value::BulkString(info.into())).is_err());
     }
 }

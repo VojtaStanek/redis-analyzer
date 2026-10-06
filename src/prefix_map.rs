@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::collections::hash_map::Iter;
 
 const KEY_SEPARATORS: [char; 5] = [':', '|', ',', '.', '_'];
 
@@ -105,10 +104,6 @@ impl<T> PrefixMap<T> {
             .collect();
         transformer(prefix, &self.value, children)
     }
-
-    pub fn iter(&self) -> Iter<'_, String, PrefixMap<T>> {
-        self.children.iter()
-    }
 }
 
 impl<T> IntoIterator for PrefixMap<T> {
@@ -139,15 +134,14 @@ mod test {
                 .is_some()
         );
         assert!(
-            map.children
+            !map.children
                 .get("foo:")
                 .unwrap()
                 .children
                 .get("foo:bar:")
                 .unwrap()
                 .children
-                .get("foo:bar:")
-                .is_none()
+                .contains_key("foo:bar:")
         );
         assert!(
             map.children
@@ -224,7 +218,7 @@ mod test {
         };
 
         let count = map.transform::<usize, _>(&|_, value, children| {
-            value.map_or(0, |_| 1) + children.iter().map(|(_, v)| v).sum::<usize>()
+            value.map_or(0, |_| 1) + children.values().sum::<usize>()
         });
 
         assert_eq!(count, 4);
@@ -242,7 +236,7 @@ mod test {
         };
 
         let count = map.transform::<i64, _>(&|_, value, children| {
-            value.map_or(0, |v| v) + children.iter().map(|(_, v)| v).sum::<i64>()
+            value.unwrap_or(0) + children.values().sum::<i64>()
         });
 
         assert_eq!(count, 1 + 2 + 4 + 8);

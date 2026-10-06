@@ -57,7 +57,6 @@ This command connects to the Redis instance at `192.168.1.100:6379` and outputs 
 - `src/prefix_map.rs`: Contains definitions and implementations related to prefix mapping.
 - `src/redis.rs`: Contains definitions and implementations related to Redis connection and commands.
 - `src/results.rs`: Contains definitions and implementations related to result formatting and output.
-- `src/results2.rs`: Additional result-related implementations.
 
 ## Contributing
 
